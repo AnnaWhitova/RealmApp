@@ -57,10 +57,68 @@ class TasksViewController: UITableViewController {
         return cell
     }
     
+    override func tableView(_ tableView: UITableView, trailingSwipeActionsConfigurationForRowAt indexPath: IndexPath) -> UISwipeActionsConfiguration? {
+        let task: Task
+        
+        if indexPath.section == 0 {
+            task = currentTasks[indexPath.row]
+        } else {
+            task = completedTasks[indexPath.row]
+        }
+        
+        let deleteAction = UIContextualAction(style: .destructive, title: "Delete") { [unowned self] _, _, _ in
+            storageManager.deleteTask(task)
+            self.currentTasks = self.taskList.tasks.filter("isComplete = false")
+            self.completedTasks = self.taskList.tasks.filter("isComplete = true")
+            tableView.deleteRows(at: [indexPath], with: .automatic)
+        }
+        
+        let editAction = UIContextualAction(style: .normal, title: "Edit") { [unowned self] _, _, isDone in
+            showAlert(with: task) {
+                tableView.reloadRows(at: [indexPath], with: .automatic)
+            }
+            isDone(true)
+        }
+        editAction.backgroundColor = .orange
+        
+        if indexPath.section == 0 {
+            let doneAction = UIContextualAction(style: .normal, title: "Done") { [unowned self] _, _, isDone in
+                storageManager.doneTask(task)
+                tableView.performBatchUpdates {
+                    self.currentTasks = self.taskList.tasks.filter("isComplete = false")
+                    self.completedTasks = self.taskList.tasks.filter("isComplete = true")
+                    tableView.deleteRows(at: [indexPath], with: .automatic)
+                    if let newRow = self.completedTasks.index(of: task) {
+                        tableView.insertRows(at: [IndexPath(row: newRow, section: 1)], with: .automatic)
+                    }
+                }
+                isDone(true)
+            }
+            doneAction.backgroundColor = .green
+            return  UISwipeActionsConfiguration(actions: [doneAction, editAction, deleteAction])
+        } else {
+            let undoneAction = UIContextualAction(style: .normal, title: "Undone") { [unowned self] _, _, undone in
+                storageManager.undoneTask(task)
+                tableView.performBatchUpdates {
+                    self.currentTasks = self.taskList.tasks.filter("isComplete = false")
+                    self.completedTasks = self.taskList.tasks.filter("isComplete = true")
+                    tableView.deleteRows(at: [indexPath], with: .automatic)
+                    if let newRow = self.currentTasks.index(of: task) {
+                        tableView.insertRows(at: [IndexPath(row: newRow, section: 0)], with: .automatic)
+                    }
+                }
+                undone(true)
+            }
+            undoneAction.backgroundColor = .green
+            return UISwipeActionsConfiguration(actions: [undoneAction, editAction, deleteAction])
+        }
+        
+    }
+    
     @objc private func addButtonPressed() {
         showAlert()
     }
-
+    
 }
 
 
@@ -79,7 +137,8 @@ extension TasksViewController {
                 style: .default
             ) { [weak self] taskTitle, taskNote in
                 if let task, let completion {
-                    // TODO: - edit task
+                    self?.storageManager.editTask(task, newTitle: taskTitle, newNote: taskNote)
+                    completion()
                     return
                 }
                 self?.save(task: taskTitle, withNote: taskNote)

@@ -52,13 +52,23 @@ final class StorageManager {
             taskList.title = newValue
         }
     }
-    
+
     func done(_ taskList: TaskList) {
         write {
             taskList.tasks.setValue(true, forKey: "isComplete")
         }
     }
     
+    func sort(with sortOption: SortOption) -> Results<TaskList> {
+        switch sortOption {
+        case .date:
+            return realm.objects(TaskList.self).sorted(byKeyPath: "date", ascending: true)
+        case .alphabetical:
+            return realm.objects(TaskList.self).sorted(byKeyPath: "title", ascending: true)
+        }
+    }
+    
+
     // MARK: - Tasks
     func save(_ task: String, withNote note: String, to taskList: TaskList, completion: (Task) -> Void) {
         write {
@@ -68,6 +78,32 @@ final class StorageManager {
         }
     }
     
+    func deleteTask(_ task: Task) {
+        write {
+            realm.delete(task)
+        }
+    }
+    
+    func editTask(_ task: Task, newTitle: String, newNote: String) {
+        write {
+            task.title = newTitle
+            task.note = newNote
+        }
+    }
+    
+    func doneTask(_ task: Task) {
+        write {
+            task.setValue(true, forKey: "isComplete")
+        }
+    }
+    
+    func undoneTask(_ task: Task) {
+        write {
+            task.setValue(false, forKey: "isComplete")
+        }
+    }
+    
+    // MARK: - Private methods
     private func write(completion: () -> Void) {
         do {
             try realm.write {
@@ -77,4 +113,9 @@ final class StorageManager {
             print(error)
         }
     }
+}
+
+enum SortOption {
+    case date
+    case alphabetical
 }

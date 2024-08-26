@@ -24,6 +24,10 @@ class TasksListViewController: UITableViewController {
         
         navigationItem.rightBarButtonItem = addButton
         navigationItem.leftBarButtonItem = editButtonItem
+     
+        
+         createTempData()
+        taskLists = storageManager.fetchData(TaskList.self)
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -42,7 +46,7 @@ class TasksListViewController: UITableViewController {
         var content = cell.defaultContentConfiguration()
         let taskList = taskLists[indexPath.row]
         content.text = taskList.title
-        content.secondaryText = taskList.title.count.formatted()
+        content.secondaryText = taskList.tasks.count.formatted()
         cell.contentConfiguration = content
 
         return cell
@@ -86,8 +90,17 @@ class TasksListViewController: UITableViewController {
     }
     
     @IBAction func sortingList(_ sender: UISegmentedControl) {
+        let sortOption: SortOption
+        switch sender.selectedSegmentIndex {
+        case 0:
+            sortOption = .date
+        default:
+            sortOption = .alphabetical
+        }
+        
+       taskLists = storageManager.sort(with: sortOption)
+        tableView.reloadData()
     }
-    
    
     @objc private func addButtonPressed() {
        showAlert()
